@@ -16,31 +16,38 @@ def preprocess(bgr):
 
 @app.route("/")
 def index():
-    # Simple HTML GUI in English
+    # HTML page with live webcam prediction
     return render_template_string("""
     <!DOCTYPE html>
     <html>
     <head>
-        <title>YoloAI Live Prediction</title>
+        <title>YoloAI Live Camera Prediction</title>
         <style>
             body { font-family: Arial; background:#f0f0f0; text-align:center; padding:40px; }
             h2 { color:#333; }
             #result { margin-top:20px; font-size:18px; font-weight:bold; }
-            button { margin-top:10px; padding:10px 20px; font-size:16px; }
+            video { border:2px solid #333; margin-top:20px; }
         </style>
     </head>
     <body>
-        <h2>YoloAI Live Prediction</h2>
-        <input type="file" id="fileInput" accept="image/*">
-        <button onclick="sendImage()">Predict</button>
-        <p id="result">Upload an image and click Predict.</p>
+        <h2>YoloAI Live Camera Prediction</h2>
+        <video id="video" width="320" height="240" autoplay></video>
+        <p id="result">Starting camera...</p>
+        <canvas id="canvas" width="224" height="224" style="display:none;"></canvas>
         <script>
-        async function sendImage() {
-            const file = document.getElementById('fileInput').files[0];
-            if (!file) { alert("Please select an image first!"); return; }
-            const reader = new FileReader();
-            reader.onload = async function() {
-                const b64 = reader.result.split(",")[1];
+        async function startCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            document.getElementById("video").srcObject = stream;
+        }
+
+        async function captureAndPredict() {
+            const video = document.getElementById("video");
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, 224, 224);
+            const b64 = canvas.toDataURL("image/jpeg").split(",")[1];
+
+            try {
                 const res = await fetch("/predict_base64", {
                     method: "POST",
                     headers: {"Content-Type":"application/json"},
@@ -49,9 +56,13 @@ def index():
                 const data = await res.json();
                 document.getElementById("result").innerText =
                     "Class: " + data.class + " | Confidence: " + data.confidence.toFixed(2);
-            };
-            reader.readAsDataURL(file);
+            } catch (err) {
+                document.getElementById("result").innerText = "Error: " + err;
+            }
         }
+
+        startCamera();
+        setInterval(captureAndPredict, 500); // every 0.5s
         </script>
     </body>
     </html>
