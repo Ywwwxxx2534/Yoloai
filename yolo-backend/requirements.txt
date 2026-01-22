@@ -1,4 +1,6 @@
-flask
-onnxruntime
-numpy
-opencv-python
+fastapi==0.115.2
+uvicorn[standard]==0.32.0
+onnxruntime==1.18.1
+numpy==1.26.4
+opencv-python==4.10.0.84
+pillow==10.4.0
